@@ -20,7 +20,7 @@ Hardware
 - Potentiometer from old RC car remote
 - MAX1811 Lipo Charger (for internal Battery)
 - Step-up 5V voltage regulator 
-- (Sainsmart ST7735 Display) or just some LEDs...
+- Sainsmart ST7735 Display / HD44780 Display / just some LEDs...
 - USB to SPI board
 
 Roadmap
@@ -38,7 +38,9 @@ Roadmap
 - Voltage monitoring of Remote lipo
 
 ####Later: 
+- Changeable maximum speed (to allow my niece to ride =) 
 - Change ESC settings via Board controller 
+- Show overload quotient (Voltbased speed vs measured wheel/motor rotation)
 - Changeable throttle response
 - Speed via GPS module
 - RGB LED lighting
