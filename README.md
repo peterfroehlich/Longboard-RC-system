@@ -38,6 +38,7 @@ Roadmap
 - Voltage monitoring of Remote lipo
 
 ####Later: 
+- Changeable maximum speed (to allow my niece to ride =) 
 - Change ESC settings via Board controller 
 - Show overload quotient (Voltbased speed vs measured wheel/motor rotation)
 - Changeable throttle response
