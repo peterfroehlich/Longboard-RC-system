@@ -24,6 +24,17 @@ char buffer[] = "000";
 
 bool debug = true;
 
+
+// Configuration for voltage measurement
+const float referenceVolts = 5;      
+const float R1 = 23780; // value for a maximum voltage of 10 volts
+const float R2 = 4690;
+const float resistorFactor = 1023.0 / (R2/(R1 + R2));  
+const int batteryPin = 0;         // +V from battery is connected to analog pin 0
+const int batteryPin = 1;
+const float calibration = 37.47;
+// End
+
 void setup()
 {
   radio.Initialize(NODEID, RF12_868MHZ, NETWORKID);
@@ -87,3 +98,17 @@ void loop()
     //}
   }
 }
+
+
+float measure_voltage() {
+  int val = analogRead(batteryPin);  // read the value from the sensor
+  return (val / resistorFactor) * referenceVolts * calibration; // calculate the ratio
+}
+
+
+float measure_current() {
+  int val = analogRead(sensePin);
+  return (val * 24.5);
+}
+
+
