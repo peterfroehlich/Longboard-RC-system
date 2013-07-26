@@ -31,7 +31,7 @@ const float R1 = 23780; // value for a maximum voltage of 10 volts
 const float R2 = 4690;
 const float resistorFactor = 1023.0 / (R2/(R1 + R2));  
 const int batteryPin = 0;         // +V from battery is connected to analog pin 0
-const int batteryPin = 1;
+const int sensePin = 1;
 const float calibration = 37.47;
 // End
 
@@ -44,7 +44,7 @@ void setup()
     Serial.begin(SERIAL_BAUD); 
     Serial.println("Listening..."); 
   }  
-  esc.attach(9); 
+  esc.attach(8); 
   
 }
 
