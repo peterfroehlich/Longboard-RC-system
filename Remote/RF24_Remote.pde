@@ -5,32 +5,19 @@
 #include "printf.h"
 
 #define potPin 0
-
-int ledpin=8 ;
+#define ledpin 8 
 
 // Set up nRF24L01 radio on SPI bus plus pins 9 & 10 
 RF24 radio(9,10);
 
-// Single radio pipe address for the 2 nodes to communicate.
-//const uint64_t pipe = 0xE8E8F0F0E1LL;
-const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL };
+// Radio pipe addresses for the 2 nodes to communicate.
+const uint64_t pipes[2] = { 0xABCDABCD71LL, 0xABCDABCD82LL };
 
-char telemetric_data[10] = "";
+char telemetric_data[20] = "";
 //int telemetric_data[2] = { 0, 0 };
 
 int throttle = 0;
-int filterStep = 5;
-float targetSpeed;
-float currentSpeed;
-int pwmSpeed;
-int triggerCenterValue;
 
-// Trigger Values. Better: Calibrate trigger routine. 
-int throttle_max = 280;
-int throttle_mid = 510;
-int throttle_min = 688;
-int throttle_resolution = throttle_min - throttle_max;
-int servo_resolution = 180;
 
 unsigned int send_error_counter = 0;
 
@@ -46,7 +33,7 @@ void initilize_radio() {
   // back and forth.  One listens on it, the other talks to it.
   //radio.openWritingPipe(pipe);
   radio.openWritingPipe(pipes[0]);
-  radio.openReadingPipe(1,pipes[1]);
+  //radio.openReadingPipe(1,pipes[1]);
       
   // optionally, increase the delay between retries & # of retries
   radio.setRetries(15,15);
@@ -76,7 +63,7 @@ void setup()   {
 
  
 bool send_throttle() {
-    radio.stopListening();
+    //radio.stopListening();
 
     if (DEBUG) { 
       printf("Sending value %d - ",throttle);
@@ -87,49 +74,23 @@ bool send_throttle() {
     if (ok) {
       if ( DEBUG ) { printf("send ok - "); }
       if (send_error_counter > 0) { --send_error_counter; }
+      if ( radio.isAckPayloadAvailable() )  {
+        radio.read(&telemetric_data,sizeof(telemetric_data));
+        if ( DEBUG ) { printf("%s\r\n", telemetric_data); };
+      }
     } else {
       if ( DEBUG ) { printf("send failed!!!! - "); }
       if (send_error_counter < 10) { ++send_error_counter; }
     }
    
     // Now, continue listening
-    radio.startListening(); 
-    
-    radio.read(&telemetric_data,sizeof(telemetric_data));
-    printf("%s\r\n", telemetric_data);
-    
+    //radio.startListening(); 
+   
+      
     return ok;
 }
 
 
-
-
-int filterInput(int input) {
-  // Kickdown rule? targetspeed über 100 mehr als currentspeed, grössere incremente? 
-  if ((input % 10) >= 5) {
-    targetSpeed = input + 10 - (input % 10);
-  } else if ((input % 10) < 5) {
-    targetSpeed = input - (input % 10);
-  }
-  
-  if (targetSpeed < currentSpeed) {           //Accelerating: Slowly step up
-    if (currentSpeed > triggerCenterValue) {  // If coming out of brake
-      currentSpeed = targetSpeed;
-    } else {
-      currentSpeed -= filterStep;
-    }
-  } else if (targetSpeed > currentSpeed) {   //Decelerating: Quickly step down
-    currentSpeed = targetSpeed;
-  }
-  
-  // Rundungsfehler! Alles auf float umstellen, am ende runden... 
-  //pwmSpeed = servo_resolution - ( (currentSpeed - throttle_max) / ( throttle_resolution / servo_resolution) );
-  pwmSpeed = map(currentSpeed, throttle_min, throttle_max, 0, 179);
- 
-  if (DEBUG) { printf("Input: %d | Current: %d | PWM: %d \r\n", input, int(currentSpeed), pwmSpeed); };
-
-  return pwmSpeed;
-}
 
 
 
@@ -154,7 +115,7 @@ void alert_on_error() {
 
 void loop()    {
   
-  throttle = filterInput(analogRead(potPin));
+  throttle = analogRead(potPin);
   
   send_throttle();
   
