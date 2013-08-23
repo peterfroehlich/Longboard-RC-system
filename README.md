@@ -1,27 +1,26 @@
 Longboard-RC-system
 ===================
 
-A rc system for my electric longboard, based on two Arduinos talking over RFM12
+A rc system for my electric longboard, based on two Arduinos talking over RF24
 
 Hardware
 --------
 
 ### In Board (electronics)
 - Arduino (Clone) Nano V3 w. USB 
-- RFM12 868MHz
+- nRF24L01
 - Hobbyking 150A car ESC
 - BTS555 MOSFET as power switch and current sensor
 - Voltage divider circut to measure battery voltage
 - 5V BEC
 
 ### In Remote 
-- Arduino Pro Mini 
-- RFM12 868MHz
+- Arduino (Clone) Nano V3 w. USB 
+- nRF24L01
 - Potentiometer from old RC car remote
 - MAX1811 Lipo Charger (for internal Battery)
 - Step-up 5V voltage regulator 
-- Sainsmart ST7735 Display / HD44780 Display / just some LEDs...
-- USB to SPI board
+- RGB LED
 
 Roadmap
 -------
