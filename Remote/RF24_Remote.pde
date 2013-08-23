@@ -4,11 +4,15 @@
 #include "RF24.h"
 #include "printf.h"
 
-#define potPin 0
-#define ledpin 8 
+#define potPin 0 // Analog 0 
+#define batPin 1 // Analog 1
+
+#define ledPinRed 6
+#define ledPinGreen 7
+#define ledPinBlue 8
 
 // Set up nRF24L01 radio on SPI bus plus pins 9 & 10 
-RF24 radio(9,10);
+RF24 radio(10,9);
 
 // Radio pipe addresses for the 2 nodes to communicate.
 const uint64_t pipes[2] = { 0xABCDABCD71LL, 0xABCDABCD82LL };
@@ -16,14 +20,32 @@ const uint64_t pipes[2] = { 0xABCDABCD71LL, 0xABCDABCD82LL };
 char telemetric_data[20] = "";
 //int telemetric_data[2] = { 0, 0 };
 
-int throttle = 0;
 
+// Trigger Values. Better: Calibrate trigger routine. 
+int throttle_max = 280;
+int throttle_mid = 510;
+int throttle_min = 688;
+int throttle_raw = 0;
+int throttle = 0;
 
 unsigned int send_error_counter = 0;
 
 
-bool DEBUG = true;
+bool DEBUG = false;
 long debug_time = millis(); 
+
+
+void initilize_rgb_led() {
+  pinMode(ledPinRed, OUTPUT);
+  pinMode(ledPinGreen, OUTPUT);
+  pinMode(ledPinBlue, OUTPUT);
+
+  digitalWrite(ledPinRed, HIGH); 
+  digitalWrite(ledPinGreen, HIGH); 
+  digitalWrite(ledPinBlue, HIGH); 
+
+  
+}
  
 
 void initilize_radio() {
@@ -56,14 +78,13 @@ void setup()   {
     printf_begin();
   }
   
-  pinMode(ledpin, OUTPUT);
+  initilize_rgb_led();
   initilize_radio();
 }
  
 
  
 bool send_throttle() {
-    //radio.stopListening();
 
     if (DEBUG) { 
       printf("Sending value %d - ",throttle);
@@ -96,18 +117,20 @@ bool send_throttle() {
 
 void led_blink() {
   if (send_error_counter < 6) {
-    digitalWrite(ledpin, HIGH);       
-    delay(50);               
-    digitalWrite(ledpin, LOW);    
+    delay(20);
+    digitalWrite(ledPinGreen, LOW);   
+    delay(20);               
+    digitalWrite(ledPinGreen, HIGH);
+  
   }
 } 
 
 
 void alert_on_error() {
   if (send_error_counter >= 6) {
-    digitalWrite(ledpin, HIGH);   // turn the LED on (HIGH is the voltage level)
+    digitalWrite(ledPinRed, LOW);   // turn the LED on (HIGH is the voltage level)
   } else {               // wait for a second
-    digitalWrite(ledpin, LOW);    // turn the LED off by making the voltage LOW
+    digitalWrite(ledPinRed, HIGH);    // turn the LED off by making the voltage LOW
   }
 } 
 
@@ -115,15 +138,17 @@ void alert_on_error() {
 
 void loop()    {
   
-  throttle = analogRead(potPin);
+  throttle_raw = analogRead(potPin);
+  throttle =  map(throttle_raw, throttle_min, throttle_max, 0, 179);
   
   send_throttle();
+  led_blink();
   
   alert_on_error();
   
   if (DEBUG) { 
    printf("Time: %d\r\n", millis() - debug_time);
-   led_blink();
+   
    delay(50);
    debug_time = millis(); 
   };

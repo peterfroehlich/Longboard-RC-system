@@ -1,20 +1,23 @@
- 
+
 #include <SPI.h>
 #include "nRF24L01.h"
 #include "RF24.h"
 #include "printf.h"
 #include "fmtDouble.h"
+#include <Servo.h> 
+
 
 #define escPin 6
 #define btsPin 4
 #define batteryPin 0         // +V from battery over voltage divider to analog pin 0
 #define sensePin 1           // BTS555 current sensor on analog 1 
 
-#include <Servo.h> 
+// Servo init
 Servo esc;  // create servo object to control a servo 
 unsigned int coast_throttle = 70;
 unsigned int throttle = coast_throttle;
 unsigned int next_throttle = coast_throttle;
+
 
 // Set up nRF24L01 radio on SPI bus plus pins 9 & 10 
 RF24 radio(9,10);
@@ -22,29 +25,25 @@ RF24 radio(9,10);
 // Radio pipe addresses for the 2 nodes to communicate.
 const uint64_t pipes[2] = { 0xABCDABCD71LL, 0xABCDABCD82LL };
 
+
 char telemetric_data[20] = "Nothing.";
 char telemetric_voltage[6] = "00.00";
 char telemetric_current[7] = "000.00";
 
+unsigned int output_throttle_old = 0;
 unsigned long last_packet_received;
-unsigned int receive_timeout = 500;
+unsigned long last_throttle_update;
+unsigned int receive_timeout = 1000;
 unsigned int esc_half_brake_setting = 30;
 
-bool DEBUG = true;
+bool DEBUG = false;
 
-
-// Trigger Values. Better: Calibrate trigger routine. 
-int throttle_max = 280;
-int throttle_mid = 510;
-int throttle_min = 688;
-int throttle_resolution = throttle_min - throttle_max;
-int servo_resolution = 180;
 
 int filterStep = 1;
-float targetSpeed;
-float currentSpeed;
-int pwmSpeed;
+int targetSpeed;
+int currentSpeed;
 int triggerCenterValue;
+int throttle_ms_steps = 100;
 
 
 // ****** Voltage / Current measure settings ******
@@ -98,10 +97,16 @@ bool initilize_esc() {
   
   // Get Relais/BTS555 to high and switch esc on
   pinMode(btsPin, OUTPUT);
-  digitalWrite(btsPin, HIGH); 
-  
 }
 
+
+bool esc_power_on() {
+  digitalWrite(btsPin, HIGH); 
+}
+
+bool esc_power_off() {
+  digitalWrite(btsPin, LOW); 
+}
 
  
 void setup()   {
@@ -112,9 +117,12 @@ void setup()   {
    
   initilize_radio();
   initilize_esc();
+  esc_power_on();
   
   // Last step, start receiving
   last_packet_received = millis();
+  last_throttle_update = millis();
+  
   attachInterrupt(0, check_radio, FALLING);
 }
  
@@ -127,33 +135,28 @@ void prepare_throttle() {
       // Fetch the payload, and see if this was the last one.
       done = radio.read( &next_throttle, sizeof(unsigned int) );
 
-      // Spew it
-      if (DEBUG) { printf("Got throttle value %d...",throttle); }
-
-	// Delay just a little bit to let the other unit
-	// make the transition to receiver
-	//delay(50);
+      // Delay just a little bit to let the other unit
+      // make the transition to receiver
+      //delay(50);
     }
-    if (DEBUG) { printf("\r\n"); }
 }
 
 
 void set_throttle() {
    //memcpy(next_throttle, throttle, sizeof(next_throttle));
    throttle = next_throttle;
-   if (DEBUG) { printf("Set. \r\n"); }
-  
-  
-  
 }
+
 
 void throttle_output() { 
   int output_throttle = filterInput(throttle);
-  if (DEBUG) { printf("Setting throttle to %d\r\n", output_throttle); }
-  esc.write(output_throttle);              
+  if (output_throttle != output_throttle_old) {
+    if (DEBUG) { printf("Input: %d | Throttle: %d \r\n", targetSpeed, output_throttle); }
+    esc.write(output_throttle);
+    output_throttle_old = output_throttle;
+  }
 }
  
-
 
 void activate_failsave() {
   if ( DEBUG ) { printf("No packet the last %d milliseconds! Activating failsave.\n\r",receive_timeout); }
@@ -163,7 +166,7 @@ void activate_failsave() {
 
 void check_radio(void)
 {
-  if (DEBUG) { printf("Got interrupt\r\n"); }
+  if (DEBUG) { printf("Got interrupt: "); }
   // What happened?
   bool tx,fail,rx;
   radio.whatHappened(tx,fail,rx);
@@ -172,6 +175,7 @@ void check_radio(void)
   if ( tx )
   {
     if ( DEBUG ) { printf("Ack Payload: Sent\n\r"); }
+    // prepare next throttle only if received succesfully (else 0 would be pushed to esc) 
     set_throttle();
     // Update last packet timestamp to reset failsave timeout
     last_packet_received=millis();
@@ -243,22 +247,23 @@ int filterInput(int input) {
     if (currentSpeed > triggerCenterValue) {  // If coming out of brake
       currentSpeed = targetSpeed;
     } else {
-      currentSpeed -= filterStep;
+      if ( last_throttle_update + throttle_ms_steps < millis() ) {
+        currentSpeed -= filterStep;
+        last_throttle_update = millis();
+      }
     }
   } else if (targetSpeed > currentSpeed) {   //Decelerating: Quickly step down
     currentSpeed = targetSpeed;
   }
   
-  // Rundungsfehler! Alles auf float umstellen, am ende runden... 
-  //pwmSpeed = servo_resolution - ( (currentSpeed - throttle_max) / ( throttle_resolution / servo_resolution) );
-  pwmSpeed = map(currentSpeed, throttle_min, throttle_max, 0, 179);
- 
-  if (DEBUG) { printf("Input: %d | Current: %d | PWM: %d \r\n", input, int(currentSpeed), pwmSpeed); };
+  //if (DEBUG) { printf("Input: %d | ", input); };
 
-  return pwmSpeed;
+  return currentSpeed;
 }
 
 
+ 
+ 
  
 void loop()    {
     
