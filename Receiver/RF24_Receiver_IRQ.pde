@@ -1,4 +1,11 @@
 
+
+// ToDo:
+// Switch ESC of after 5 sec reception lost, switch back on after 2 sek stable connection.
+// Thermodiode
+
+
+
 #include <SPI.h>
 #include "nRF24L01.h"
 #include "RF24.h"
@@ -34,9 +41,11 @@ unsigned int output_throttle_old = 0;
 unsigned long last_packet_received;
 unsigned long last_throttle_update;
 unsigned int receive_timeout = 1000;
+unsigned int esc_off_timeout = 3000;
 unsigned int esc_half_brake_setting = 30;
 
 bool DEBUG = false;
+bool esc_power_active = false; 
 
 
 int filterStep = 1;
@@ -102,10 +111,12 @@ bool initilize_esc() {
 
 bool esc_power_on() {
   digitalWrite(btsPin, HIGH); 
+  esc_power_active = true; 
 }
 
 bool esc_power_off() {
   digitalWrite(btsPin, LOW); 
+  esc_power_active = false; 
 }
 
  
@@ -117,7 +128,6 @@ void setup()   {
    
   initilize_radio();
   initilize_esc();
-  esc_power_on();
   
   // Last step, start receiving
   last_packet_received = millis();
@@ -159,8 +169,15 @@ void throttle_output() {
  
 
 void activate_failsave() {
-  if ( DEBUG ) { printf("No packet the last %d milliseconds! Activating failsave.\n\r",receive_timeout); }
-  esc.write(esc_half_brake_setting);
+  if ( last_packet_received + receive_timeout + esc_off_timeout < millis() ) {
+    if ( esc_power_active ) {
+      if ( DEBUG ) { printf("ESC power cutoff initiated"); }
+      esc_power_off();
+    }
+  } else {
+    if ( DEBUG ) { printf("No packet the last %d milliseconds! Activating failsave.\n\r",receive_timeout); }
+    esc.write(esc_half_brake_setting);
+  }
 }  
 
 
@@ -270,6 +287,9 @@ void loop()    {
   if ( last_packet_received + receive_timeout < millis() ) {
     activate_failsave();
   } else { 
+    if ( not esc_power_active ) {
+      esc_power_on();
+    }
     throttle_output();
     measure_current();
     measure_voltage();
