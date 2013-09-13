@@ -11,6 +11,7 @@ Hardware
 - nRF24L01
 - Hobbyking 150A car ESC
 - BTS555 MOSFET as power switch and current sensor
+- SFH610-3 optocoupler to switch BTS555 isolated from Arduino
 - Voltage divider circut to measure battery voltage
 - 5V BEC
 
@@ -32,11 +33,12 @@ Roadmap
 
 ####v2:
 - Current and battery voltage get transmitted to Remote 
-- Display speed as a function of voltage and Motor KV
 - temperature monitoring
 - Voltage monitoring of Remote lipo
+- Display all these infos on Remote
 
 ####Later: 
+- Display speed as a function of voltage and Motor KV
 - Changeable maximum speed (to allow my niece to ride =) 
 - Change ESC settings via Board controller 
 - Show overload quotient (Voltbased speed vs measured wheel/motor rotation)
