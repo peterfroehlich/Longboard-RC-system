@@ -1,5 +1,4 @@
 
-
 // ToDo:
 // Switch ESC of after 5 sec reception lost, switch back on after 2 sek stable connection.
 // Thermodiode
@@ -21,7 +20,7 @@
 
 // Servo init
 Servo esc;  // create servo object to control a servo 
-unsigned int coast_throttle = 70;
+unsigned int coast_throttle = 78;
 unsigned int throttle = coast_throttle;
 unsigned int next_throttle = coast_throttle;
 
@@ -40,6 +39,7 @@ char telemetric_current[7] = "000.00";
 unsigned int output_throttle_old = 0;
 unsigned long last_packet_received;
 unsigned long last_throttle_update;
+unsigned long start_time;
 unsigned int receive_timeout = 1000;
 unsigned int esc_off_timeout = 3000;
 unsigned int esc_half_brake_setting = 30;
@@ -110,11 +110,13 @@ bool initilize_esc() {
 
 
 bool esc_power_on() {
+  if (DEBUG) { printf("Activating esc.\r\n"); }
   digitalWrite(btsPin, HIGH); 
   esc_power_active = true; 
 }
 
 bool esc_power_off() {
+  if ( DEBUG ) { printf("ESC power cutoff\r\n"); }
   digitalWrite(btsPin, LOW); 
   esc_power_active = false; 
 }
@@ -129,11 +131,13 @@ void setup()   {
   initilize_radio();
   initilize_esc();
   
-  // Last step, start receiving
-  last_packet_received = millis();
+  // Initilize timeout variables
+  last_packet_received = millis() - receive_timeout - esc_off_timeout;
+  start_time = last_packet_received;
   last_throttle_update = millis();
   
   attachInterrupt(0, check_radio, FALLING);
+  if (DEBUG) { printf("Setup done, waiting for remote\r\n"); }
 }
  
 
@@ -145,8 +149,6 @@ void prepare_throttle() {
       // Fetch the payload, and see if this was the last one.
       done = radio.read( &next_throttle, sizeof(unsigned int) );
 
-      // Delay just a little bit to let the other unit
-      // make the transition to receiver
       //delay(50);
     }
 }
@@ -171,7 +173,6 @@ void throttle_output() {
 void activate_failsave() {
   if ( last_packet_received + receive_timeout + esc_off_timeout < millis() ) {
     if ( esc_power_active ) {
-      if ( DEBUG ) { printf("ESC power cutoff initiated"); }
       esc_power_off();
     }
   } else {
@@ -227,7 +228,6 @@ void build_telemetry(void) {
   
   radio.writeAckPayload( 1, &telemetric_data, sizeof(telemetric_data) );
 
-
 }
 
 void measure_voltage() {
@@ -278,21 +278,23 @@ int filterInput(int input) {
   return currentSpeed;
 }
 
-
  
  
  
-void loop()    {
-    
-  if ( last_packet_received + receive_timeout < millis() ) {
-    activate_failsave();
-  } else { 
-    if ( not esc_power_active ) {
+void loop() {
+  //if (DEBUG) { printf("%d\r\n", last_packet_received); }
+  
+  if ( last_packet_received + receive_timeout > millis() ) {
+    if (( not esc_power_active ) && ( last_packet_received != start_time )) {
       esc_power_on();
     }
     throttle_output();
     measure_current();
     measure_voltage();
+    
+  } else { 
+    activate_failsave();
+    
   }
 }
 
