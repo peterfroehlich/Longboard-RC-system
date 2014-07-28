@@ -262,9 +262,10 @@ float measure_current() {
 
 int filterInput(int input) {
   
+  SpeedThrottleInput = input;
+  
   // debug throttle 
-  if ( false ) {
-    SpeedThrottleInput = input;
+  if ( true ) {
     if (SpeedThrottleInput != SpeedCurrentOutput) {
     Serial.print("Throttle Input: ");
     Serial.println(SpeedThrottleInput);
