@@ -32,10 +32,6 @@ RF24 radio(9,10);
 const uint64_t pipes[2] = { 0xABCDABCD71LL, 0xABCDABCD82LL };
 
 
-char telemetric_data[20] = "Nothing.";
-char telemetric_voltage[6] = "00.00";
-char telemetric_current[7] = "000.00";
-
 unsigned int output_throttle_old = 0;
 unsigned long last_packet_received;
 unsigned long last_throttle_update = millis();
@@ -65,24 +61,32 @@ typedef struct
 } cmdPacket;
 
 // create an instance of the packet
-cmdPacket Packet; 
+cmdPacket Cmd; 
 
 
 // ****** Voltage / Current measure settings ******
 const float referenceVolts = 5;        // the default reference on a 5-volt board
 //const float referenceVolts = 3.3;  // use this for a 3.3-volt board
 
-const float R1 = 23780; // value for a maximum voltage of 10 volts
+const float R1 = 23780; // value for a maximum voltage of ? volts
 const float R2 = 4690;
 // determine by voltage divider resistors, see text
-const float resistorFactor = 1023.0 / (R2/(R1 + R2));  
-
+const int resistorFactor = 1023.0 / (R2/(R1 + R2));  
 const float calibration = 37.47;
+const float voltageFactor = ((referenceVolts * calibration) / resistorFactor) * 1000;
 
-const float currentFactor = 24.5;
+const int currentFactor = 25;
 
-float battery_current;
-float battery_voltage;
+int battery_current; // in milliaps
+int battery_voltage; // in millivolts
+
+typedef struct
+{
+  int voltage;
+  int current;
+} telemetryPacket;
+
+telemetryPacket Telemetry;
 
 
 // ************************************************
@@ -162,10 +166,10 @@ void prepare_throttle() {
     while (!done)
     {
       // Fetch the payload, and see if this was the last one.
-      done = radio.read( &Packet, sizeof(Packet) );
+      done = radio.read( &Cmd, sizeof(Cmd) );
     }
-    next_throttle = Packet.throttle;
-    driveMode = Packet.mode; 
+    next_throttle = Cmd.throttle;
+    driveMode = Cmd.mode; 
 }
 
 
@@ -213,8 +217,7 @@ void check_radio(void)
     // prepare next throttle only if received succesfully (else 0 would be pushed to esc) 
     set_throttle();
     // Update last packet timestamp to reset failsave timeout
-    last_packet_received=millis();
-    
+    last_packet_received=millis();   
   }
 
   // Have we failed to transmit?
@@ -227,44 +230,48 @@ void check_radio(void)
   if ( rx )
   {
     if (DEBUG) { printf("Received data: "); }
-    build_telemetry();
+    send_telemetry();
     prepare_throttle();     
   }
   
 }
 
 
-void build_telemetry(void) {
-  //telemetric_current = "017.05";
-  fmtDouble(battery_voltage, 2, telemetric_voltage, sizeof(telemetric_voltage));
-  fmtDouble(battery_current, 2, telemetric_current, sizeof(telemetric_current));
-  
-  strcpy(telemetric_data, telemetric_voltage);
-  strcat(telemetric_data, "X");
-  strcat(telemetric_data, telemetric_current);
-  
-  //radio.stopListening();  
-  radio.writeAckPayload( 1, &telemetric_data, sizeof(telemetric_data) );
-  //radio.startListening();  
+//void build_telemetry(void) {
+//  //telemetric_current = "017.05";
+//  fmtDouble(battery_voltage, 2, telemetric_voltage, sizeof(telemetric_voltage));
+//  fmtDouble(battery_current, 2, telemetric_current, sizeof(telemetric_current));
+//  
+//  strcpy(telemetric_data, telemetric_voltage);
+//  strcat(telemetric_data, "X");
+//  strcat(telemetric_data, telemetric_current);
+//  
+//  //radio.stopListening();  
+//  radio.writeAckPayload( 1, &telemetric_data, sizeof(telemetric_data) );
+//  //radio.startListening();  
+//}
+
+void send_telemetry(void) {
+   radio.writeAckPayload(1, &Telemetry, sizeof(Telemetry)); 
 }
 
 
 void measure_voltage() {
-  battery_voltage = (analogRead(batteryPin) / resistorFactor) * referenceVolts * calibration; // calculate the ratio
+  Telemetry.voltage = (analogRead(batteryPin) * voltageFactor); // calculate the ratio
   
-  if ( false ) { 
+  if ( true ) { 
     printf("Voltage: ");
-    Serial.println(battery_voltage);
+    Serial.println(Telemetry.voltage);
   }
 }
 
 
 float measure_current() {
-  battery_current = (analogRead(sensePin) * currentFactor);
+  Telemetry.current = (analogRead(sensePin) * currentFactor);
   
-  if ( false ) { 
+  if ( true ) { 
     printf("Current: "); 
-    Serial.println(battery_current);
+    Serial.println(Telemetry.current);
   }
 }
 

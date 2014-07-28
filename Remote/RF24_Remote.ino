@@ -22,9 +22,6 @@ RF24 radio(10,9);
 // Radio pipe addresses for the 2 nodes to communicate.
 const uint64_t pipes[2] = { 0xABCDABCD71LL, 0xABCDABCD82LL };
 
-char telemetric_data[20] = "";
-//int telemetric_data[2] = { 0, 0 };
-
 
 // Trigger Values. Better: Calibrate trigger routine. 
 int throttle_max = 280;
@@ -41,6 +38,16 @@ typedef struct
 
 // create an instance of the packet
 cmdPacket Packet; 
+
+ //Telemetry stuff
+typedef struct
+{
+  int voltage;
+  int current;
+} telemetryPacket;
+
+telemetryPacket Telemetry;
+
 
 unsigned int send_error_counter = 0;
 
@@ -123,8 +130,8 @@ bool send_throttle() {
       if ( DEBUG ) { printf("send ok - "); }
       if (send_error_counter > 0) { --send_error_counter; }
       if ( radio.isAckPayloadAvailable() )  {
-        radio.read(&telemetric_data,sizeof(telemetric_data));
-        if ( DEBUG ) { printf("telemetry: %s\r\n", telemetric_data); };
+        radio.read(&Telemetry,sizeof(Telemetry));
+        if ( DEBUG ) { printf("telemetry: mVolt: %d mAmps: %d \r\n", Telemetry.voltage, Telemetry.current ); };
       }
     } else {
       if ( DEBUG ) { printf("send failed!!!! - "); }
