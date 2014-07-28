@@ -12,6 +12,8 @@
 #include "fmtDouble.h"
 #include <Servo.h> 
 
+#include <DriveModes.ino>
+
 
 #define escPin 6
 #define btsPin 4
@@ -40,13 +42,8 @@ unsigned int receive_timeout = 1000;
 unsigned int esc_off_timeout = 3000;
 unsigned int esc_half_brake_setting = 30;
 
-bool DEBUG = true;
+bool DEBUG = false;
 bool esc_power_active = false; 
-
-int lowSpeedHighSpeedBorder = 120;
-int highSpeedFilterStep = 2;
-int lowSpeedFilterStep = 4;
-int throttle_ms_steps = 200;
 
 int SpeedThrottleInput;
 int SpeedCurrentOutput;
@@ -113,7 +110,6 @@ void initilize_radio() {
   
   radio.startListening();
   
-  // Breaks everything for some reason if remote is sending packets already
   if (DEBUG) { radio.printDetails(); }
 }
 
@@ -130,6 +126,7 @@ bool initilize_esc() {
 
 bool esc_power_on() {
   if (DEBUG) { printf("Activating esc.\r\n"); }
+  esc.write(coast_throttle);
   digitalWrite(btsPin, HIGH); 
   esc_power_active = true; 
 }
@@ -144,6 +141,7 @@ bool esc_power_off() {
 void setup()   {
   if (DEBUG) { 
     Serial.begin(57600);
+    // Breaks everything for some reason if remote is sending packets already
     //printf_begin();
   }
   
@@ -237,20 +235,6 @@ void check_radio(void)
 }
 
 
-//void build_telemetry(void) {
-//  //telemetric_current = "017.05";
-//  fmtDouble(battery_voltage, 2, telemetric_voltage, sizeof(telemetric_voltage));
-//  fmtDouble(battery_current, 2, telemetric_current, sizeof(telemetric_current));
-//  
-//  strcpy(telemetric_data, telemetric_voltage);
-//  strcat(telemetric_data, "X");
-//  strcat(telemetric_data, telemetric_current);
-//  
-//  //radio.stopListening();  
-//  radio.writeAckPayload( 1, &telemetric_data, sizeof(telemetric_data) );
-//  //radio.startListening();  
-//}
-
 void send_telemetry(void) {
    radio.writeAckPayload(1, &Telemetry, sizeof(Telemetry)); 
 }
@@ -259,7 +243,7 @@ void send_telemetry(void) {
 void measure_voltage() {
   Telemetry.voltage = (analogRead(batteryPin) * voltageFactor); // calculate the ratio
   
-  if ( true ) { 
+  if ( false ) { 
     printf("Voltage: ");
     Serial.println(Telemetry.voltage);
   }
@@ -269,7 +253,7 @@ void measure_voltage() {
 float measure_current() {
   Telemetry.current = (analogRead(sensePin) * currentFactor);
   
-  if ( true ) { 
+  if ( false ) { 
     printf("Current: "); 
     Serial.println(Telemetry.current);
   }
@@ -277,49 +261,45 @@ float measure_current() {
 
 
 int filterInput(int input) {
-  // Kickdown rule? SpeedThrottleInput über 100 mehr als SpeedCurrentOutput, grössere incremente? 
-  //if ((input % 10) >= 5) {
-  //  SpeedThrottleInput = input + 10 - (input % 10);
-  //} else if ((input % 10) < 5) {
-  //  SpeedThrottleInput = input - (input % 10);
-  //}
   
-  SpeedThrottleInput = input;
-  if (SpeedThrottleInput != SpeedCurrentOutput) {
-  Serial.print("Throttle Input: ");
-  Serial.println(SpeedThrottleInput);
-  Serial.print("Current Speed: ");
-  Serial.println(SpeedCurrentOutput);
-  Serial.print("Mode: ");
-  Serial.println(driveMode);
-  Serial.println("");
-  }
-   
-  if (SpeedThrottleInput < triggerCenterValue) {          //Input negetive
-    SpeedCurrentOutput = SpeedThrottleInput;
-  } else if (SpeedCurrentOutput < triggerCenterValue) {   //Current negative, Input positive
-    SpeedCurrentOutput = triggerCenterValue;
-  } else if (SpeedCurrentOutput >= SpeedThrottleInput) {   //Current positive, Input positive, current bigger
-    SpeedCurrentOutput = SpeedThrottleInput;
-  } else if (SpeedCurrentOutput < SpeedThrottleInput) {   //Current positive, Input positive, Input bigger
-    if ( last_throttle_update + throttle_ms_steps < millis() ) {
-      if (SpeedCurrentOutput < lowSpeedHighSpeedBorder) {
-        SpeedCurrentOutput += lowSpeedFilterStep;
-      } else {
-        SpeedCurrentOutput += highSpeedFilterStep;
-      }
-      last_throttle_update = millis();
+  // debug throttle 
+  if ( false ) {
+    SpeedThrottleInput = input;
+    if (SpeedThrottleInput != SpeedCurrentOutput) {
+    Serial.print("Throttle Input: ");
+    Serial.println(SpeedThrottleInput);
+    Serial.print("Current Speed: ");
+    Serial.println(SpeedCurrentOutput);
+    Serial.print("Mode: ");
+    Serial.println(driveMode);
+    Serial.println("");
     }
   }
-
+  
+  switch (driveMode) {
+    case 0:
+      SpeedCurrentOutput = normalMode();
+      break;
+    case 1:
+      SpeedCurrentOutput = directMode(SpeedThrottleInput);
+      break;
+    case 2:
+      SpeedCurrentOutput = easyMode();
+      break;
+    case 3:
+      SpeedCurrentOutput = kidMode();
+      break;
+    case 4:
+      SpeedCurrentOutput = agressiveMode();
+      break;
+  }
+  
   return SpeedCurrentOutput;
 }
 
   
  
 void loop() {
-  //if (DEBUG) { printf("%d\r\n", last_packet_received); }
-  
   if ( last_packet_received + receive_timeout > millis() ) {
     if (( not esc_power_active ) && ( last_packet_received != start_time )) {
       throttle = coast_throttle; 

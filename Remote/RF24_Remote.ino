@@ -14,7 +14,7 @@
 #define switchPinOne 2
 #define switchPinTwo 4
 #define switchPinThree 5
-#define switchPinFourAnalog 6
+#define switchPinFourAnalog A6
 
 // Set up nRF24L01 radio on SPI bus plus pins 9 & 10 
 RF24 radio(10,9);
@@ -28,15 +28,14 @@ int throttle_max = 280;
 int throttle_mid = 510;
 int throttle_min = 688;
 int throttle_raw = 0;
-//int throttle = 0;
 
+//Command packet
 typedef struct
 {
   int throttle;
   byte mode;
 } cmdPacket;
 
-// create an instance of the packet
 cmdPacket Packet; 
 
  //Telemetry stuff
@@ -66,8 +65,29 @@ void initilize_rgb_led() {
   digitalWrite(ledPinGreen, HIGH); 
   digitalWrite(ledPinBlue, HIGH); 
 }
- 
 
+void initialize_switches() {
+  pinMode(switchPinOne, INPUT);
+  pinMode(switchPinTwo, INPUT); 
+  pinMode(switchPinThree, INPUT);
+  //pinMode(switchPinFourAnalog, INPUT);
+}
+
+void set_drive_mode() {
+  
+  byte switches = 0;
+  
+  if (digitalRead(switchPinOne) == HIGH) {switches += B1; };
+  if (digitalRead(switchPinTwo) == HIGH) {switches += B10; };
+  if (digitalRead(switchPinThree) == HIGH) {switches += B100; };  
+  //if (digitalRead(switchPinFourAnalog) == HIGH) {switches += B1000; };  
+  
+  Packet.mode = switches;
+
+  if (DEBUG) {  printf("Set Drive Mode %d \r\n", Packet.mode); }  
+}
+  
+  
 void initilize_radio() {
   radio.begin();
   
@@ -93,16 +113,15 @@ void initilize_radio() {
 
  
 void setup()   {
-  
   if (DEBUG) { 
     Serial.begin(57600);
     printf_begin();
   }
   
   initilize_rgb_led();
-  
-  Packet.mode = 0;
-  
+  initialize_switches();
+  set_drive_mode();
+
   show_battery_state();
   
   initilize_radio();
