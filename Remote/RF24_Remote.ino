@@ -294,7 +294,7 @@ void initialize_main_lcd() {
 void main_lcd() {
   int throttle_pct = map(throttle_raw, throttle_min, throttle_max, -100, 100);
   int offset = 0;
-  if (throttle_pct > 0) {
+  if (throttle_pct >= 0) {
    offset += 1;
   }
   if (abs(throttle_pct) < 10) {
