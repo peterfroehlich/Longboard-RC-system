@@ -22,6 +22,7 @@ Hardware
 - MAX1811 Lipo Charger (for internal Battery)
 - Step-up 5V voltage regulator 
 - RGB LED
+- Four switches to choose drive mode
 
 Roadmap
 -------
