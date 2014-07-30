@@ -4,6 +4,9 @@
 #include "RF24.h"
 #include <LiquidCrystal.h>
 #include "printf.h"
+#include <display.ino>
+#include <menu.ino>
+#include <led.ino>
 
 #define potPin 0 // Analog 0 
 #define batPin 1 // Analog 1
@@ -12,9 +15,7 @@
 #define ledPinGreen 7
 #define ledPinBlue 8
 
-#define switchPinOne 2
-#define switchPinTwo 3
-#define switchPinThree 5
+#define switchPin 2
 
 // HD44780 Display
 #define LCDRS 4
@@ -68,16 +69,6 @@ unsigned int send_error_counter = 0;
 
 float voltageValue;
 
-// Mode names for the UI. Can be accessed by index
-char* modes[]={
-  "Normal",
-  "Direct",
-  "EasyMode",
-  "KidMode",
-  "Aggresive"
-};
-
-
 void initilize_rgb_led() {
   pinMode(ledPinRed, OUTPUT);
   pinMode(ledPinGreen, OUTPUT);
@@ -88,23 +79,29 @@ void initilize_rgb_led() {
   digitalWrite(ledPinBlue, HIGH); 
 }
 
-void initialize_switches() {
-  pinMode(switchPinOne, INPUT);
-  pinMode(switchPinTwo, INPUT); 
- // pinMode(switchPinThree, INPUT);
-}
+
+
+
 
 void set_drive_mode() {
   
   byte switches = 0;
   
-  if (digitalRead(switchPinOne) == HIGH) {switches += B1; };
-  if (digitalRead(switchPinTwo) == HIGH) {switches += B10; };
+  if (digitalRead(switchPin) == HIGH) {switches += B1; };
+  //if (digitalRead(switchPinTwo) == HIGH) {switches += B10; };
   //if (digitalRead(switchPinThree) == HIGH) {switches += B100; };  
   
   Packet.mode = switches;
 
   if (DEBUG) {  printf("Set Drive Mode %d \r\n", Packet.mode); }  
+}
+
+
+
+
+void initialize_switches() {
+  pinMode(switchPin, INPUT);
+  //attachInterrupt(0, check_switch_input, RISING);
 }
   
   
@@ -130,6 +127,7 @@ void initilize_radio() {
   
   if (DEBUG) { radio.printDetails(); }
 }
+
 
 void initialize_lcd() {
   lcd.begin(8, 2); 
@@ -204,116 +202,9 @@ float get_voltage() {
 }
 
 
-void show_battery_state_led() {
-  voltageValue = get_voltage();
-  
-  if (voltageValue > 4.0) {
-    led_blink(ledPinGreen, 400, 3);
-  } else if (voltageValue > 3.6) {
-    led_blink(ledPinGreen, 400, 2);
-    led_blink(ledPinRed, 400, 1);
-  } else if (voltageValue > 3.2) {
-    led_blink(ledPinGreen, 400, 1);
-    led_blink(ledPinRed, 400, 2);
-  } else if (voltageValue > 2.9) {
-    led_blink(ledPinRed, 500, 3); 
-  } else { 
-    led_blink(ledPinRed, 1000, 3600);
-  }
-  delay(1000);
-}
 
 
-void show_battery_state_lcd() {
-  voltageValue = get_voltage();
-  lcd.clear();
-  lcd.setCursor(0, 0); 
-  lcd.print("Battery:");
-  lcd.setCursor(0, 1); 
-  
-  if (voltageValue > 4.0) {
-    lcd.print("OK");
-  } else if (voltageValue > 3.5) {
-    lcd.print("Mid");
-  } else if (voltageValue > 2.9) {
-    lcd.print("Low");
-  } else { 
-    lcd.print(" EMPTY! ");
-    while ( not DEBUG ) {
-      lcd.display();
-      delay(500);
-      lcd.noDisplay();
-      delay(500);
-    }
-  }
-  
-  lcd.print(" ");
-  lcd.print(voltageValue);
-  
-  delay(1500);
-}
 
-
-void led_blink(int color, int time, int repeats) {
-  for (int x = 0; x < repeats; x++) {
-    if (x > 0) { delay(time); } 
-    digitalWrite(color, LOW);   
-    delay(time);               
-    digitalWrite(color, HIGH);
-  }
-} 
-
-
-void alert_on_error() {
-  if (send_error_counter > 6) {
-    digitalWrite(ledPinRed, LOW);   // turn the LED on 
-  } else {               
-    digitalWrite(ledPinRed, HIGH);    // turn the LED off 
-  }
-} 
-
-
-// LCD Stuff
-//
-//
-
-void initialize_main_lcd() {
-  lcd.clear();
-  
-  // first line: mode
-  lcd.setCursor(0, 0); 
-  lcd.print(modes[Packet.mode]);
-  
-  // second line, first half: throttle
-  lcd.setCursor(4, 1);
-  lcd.print("%"); 
-  
-  main_lcd();
-}
-
-void main_lcd() {
-  int throttle_pct = map(throttle_raw, throttle_min, throttle_max, -100, 100);
-  int offset = 0;
-  if (throttle_pct >= 0) {
-   offset += 1;
-  }
-  if (abs(throttle_pct) < 10) {
-   offset += 2;
-  } else if (abs(throttle_pct) < 100 ) {
-   offset += 1;
-  } 
-
-  lcd.setCursor(0, 1);
-  for (int x = offset; x > 0; x--) {
-    lcd.print(" ");
-  }
-  lcd.print(throttle_pct);
-  
-  // second line, second half: Board Voltage
-  lcd.setCursor(5, 1);
-  lcd.print(Telemetry.voltage);
-}
-  
 
 // Main Loop
 //
@@ -333,6 +224,7 @@ void loop() {
   
   main_lcd();
   
+  check_switch_input();  
   
   if (DEBUG) { 
    printf("Time: %d\r\n", millis() - debug_time);
