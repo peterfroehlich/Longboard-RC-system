@@ -1,8 +1,6 @@
 
 // ToDo:
-// Switch ESC of after 5 sec reception lost, switch back on after 2 sek stable connection.
 // Thermodiode
-
 
 
 #include <SPI.h>
@@ -69,7 +67,7 @@ const float R1 = 23780; // value for a maximum voltage of ? volts
 const float R2 = 4690;
 // determine by voltage divider resistors, see text
 const int resistorFactor = 1023.0 / (R2/(R1 + R2));  
-const float calibration = 37.47;
+const float calibration = 36;
 const float voltageFactor = ((referenceVolts * calibration) / resistorFactor) * 1000;
 
 const int currentFactor = 25;

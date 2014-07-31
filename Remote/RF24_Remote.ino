@@ -1,3 +1,6 @@
+ // ToDo: 
+ // Show battery state of controller batt to user
+ // 
  
 #include <SPI.h>
 #include "nRF24L01.h"
