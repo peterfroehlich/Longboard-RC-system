@@ -19,9 +19,11 @@ Hardware
 - Arduino (Clone) Nano V3 w. USB 
 - nRF24L01
 - Potentiometer from old RC car remote
+- HD44780 8x2 lines Display
 - MAX1811 Lipo Charger (for internal Battery)
 - Step-up 5V voltage regulator 
 - RGB LED
+- Four switches to choose drive mode
 
 Roadmap
 -------
