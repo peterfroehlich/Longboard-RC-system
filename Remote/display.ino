@@ -2,9 +2,9 @@
 
 // Mode names for the UI. Can be accessed by index
 char* modes[]={
+  "EasyMode",
   "Normal",
   "Direct",
-  "EasyMode",
   "KidMode",
   "Aggresive"
 };

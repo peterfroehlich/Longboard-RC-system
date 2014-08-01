@@ -91,8 +91,6 @@ void set_drive_mode() {
   byte switches = 0;
   
   if (digitalRead(switchPin) == HIGH) {switches += B1; };
-  //if (digitalRead(switchPinTwo) == HIGH) {switches += B10; };
-  //if (digitalRead(switchPinThree) == HIGH) {switches += B100; };  
   
   Packet.mode = switches;
 

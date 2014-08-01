@@ -9,6 +9,8 @@
 #include "printf.h"
 #include "fmtDouble.h"
 #include <Servo.h> 
+#include <avr/power.h>
+#include <avr/sleep.h>
 
 #include <DriveModes.ino>
 
@@ -66,11 +68,13 @@ const float referenceVolts = 5;        // the default reference on a 5-volt boar
 const float R1 = 23780; // value for a maximum voltage of ? volts
 const float R2 = 4690;
 // determine by voltage divider resistors, see text
-const int resistorFactor = 1023.0 / (R2/(R1 + R2));  
+const float resistorFactor = 1023.0 / (R2/(R1 + R2));  
 const float calibration = 36;
 const float voltageFactor = ((referenceVolts * calibration) / resistorFactor) * 1000;
 
 const int currentFactor = 25;
+
+const int low_voltage_cutoff = 19300;
 
 int battery_current; // in milliaps
 int battery_voltage; // in millivolts
@@ -241,7 +245,7 @@ void send_telemetry(void) {
 void measure_voltage() {
   Telemetry.voltage = (analogRead(batteryPin) * voltageFactor); // calculate the ratio
   
-  if ( false ) { 
+  if ( true ) { 
     printf("Voltage: ");
     Serial.println(Telemetry.voltage);
   }
@@ -263,7 +267,7 @@ int filterInput(int input) {
   SpeedThrottleInput = input;
   
   // debug throttle 
-  if ( true ) {
+  if ( DEBUG ) {
     if (SpeedThrottleInput != SpeedCurrentOutput) {
     Serial.print("Throttle Input: ");
     Serial.println(SpeedThrottleInput);
@@ -277,13 +281,13 @@ int filterInput(int input) {
   
   switch (driveMode) {
     case 0:
-      SpeedCurrentOutput = normalMode();
+      SpeedCurrentOutput = easyMode();
       break;
     case 1:
-      SpeedCurrentOutput = directMode(SpeedThrottleInput);
+      SpeedCurrentOutput = normalMode();
       break;
     case 2:
-      SpeedCurrentOutput = easyMode();
+      SpeedCurrentOutput = directMode(SpeedThrottleInput);
       break;
     case 3:
       SpeedCurrentOutput = kidMode();
@@ -296,6 +300,39 @@ int filterInput(int input) {
   return SpeedCurrentOutput;
 }
 
+  
+  
+void low_voltage_protection() {
+  if (Telemetry.current < low_voltage_cutoff && not DEBUG) {
+    
+    int brake_delay = 5000;
+    int now = millis();
+    
+    if ( DEBUG ) { Serial.println("Emergency battery cutoff reached, sorry if Zombies will eat you but these LiPos have feelings too."); }
+    
+    detachInterrupt(0);
+    
+    while (now + brake_delay > millis()) {
+      esc.write(esc_half_brake_setting);
+    }
+       
+    esc_power_off();
+    
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN);   // sleep mode is set here
+  
+    sleep_enable();          // enables the sleep bit in the mcucr register
+    
+    power_adc_disable();
+    power_spi_disable();
+    power_timer0_disable();
+    power_timer1_disable();
+    power_timer2_disable();
+    power_twi_disable();
+  
+    sleep_mode(); // sleep tight  
+  }
+}
+    
   
  
 void loop() {
@@ -314,6 +351,7 @@ void loop() {
     activate_failsave();
     
   }
+  low_voltage_protection();
 }
 
 
