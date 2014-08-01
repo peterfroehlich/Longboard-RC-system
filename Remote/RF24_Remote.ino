@@ -23,10 +23,10 @@
 // HD44780 Display
 #define LCDRS 4
 #define LCDE 5
-#define LCDD4 16
-#define LCDD5 17
-#define LCDD6 18
-#define LCDD7 19
+#define LCDD4 16 // Analog 2
+#define LCDD5 17 // Analog 3
+#define LCDD6 18 // Analog 4
+#define LCDD7 19 // Analog 5
 
 #define VERSION "Ver 0.2"
 
@@ -67,10 +67,22 @@ typedef struct
 
 telemetryPacket Telemetry;
 
-
+byte notifications = 0;
+int notification_period = 4000;
+long last_notification = millis();  
 unsigned int send_error_counter = 0;
+int voltage_low_threshold = 20000;
 
 float voltageValue;
+
+// UI variables
+int display_mode = 0;
+
+
+
+// SETUP 
+//
+//
 
 void initilize_rgb_led() {
   pinMode(ledPinRed, OUTPUT);
@@ -80,9 +92,11 @@ void initilize_rgb_led() {
   digitalWrite(ledPinRed, HIGH); 
   digitalWrite(ledPinGreen, HIGH); 
   digitalWrite(ledPinBlue, HIGH); 
+  
+  led_blink(ledPinRed, 300, 1);
+  led_blink(ledPinGreen, 300, 1);
+  led_blink(ledPinBlue, 300, 1);
 }
-
-
 
 
 
@@ -91,7 +105,6 @@ void set_drive_mode() {
   byte switches = 0;
   
   if (digitalRead(switchPin) == HIGH) {switches += B1; };
-  
   Packet.mode = switches;
 
   if (DEBUG) {  printf("Set Drive Mode %d \r\n", Packet.mode); }  
@@ -99,10 +112,8 @@ void set_drive_mode() {
 
 
 
-
 void initialize_switches() {
   pinMode(switchPin, INPUT);
-  //attachInterrupt(0, check_switch_input, RISING);
 }
   
   
@@ -136,7 +147,7 @@ void initialize_lcd() {
   lcd.setCursor(0, 1); 
   lcd.print(VERSION);
   
-  delay(1000);
+  delay(800);
 }
   
 
@@ -153,6 +164,7 @@ void setup()   {
   set_drive_mode();
 
   show_battery_state_lcd();
+  delay(1500);
   
   initilize_radio();
   initialize_main_lcd();
@@ -166,15 +178,7 @@ bool send_throttle() {
       printf("Sending value %d - ",Packet.throttle);
     }
     
-    // First, stop listening so we can talk.
-    //radio.stopListening();
-    digitalWrite(ledPinBlue, LOW);
-    
     bool ok = radio.write( &Packet, sizeof(Packet));
-    
-    // Now, continue listening
-    //radio.startListening(); 
-    digitalWrite(ledPinBlue, HIGH);
     
     if (ok) {
       if ( DEBUG ) { printf("send ok - "); }
@@ -194,7 +198,8 @@ bool send_throttle() {
 
 
 float get_voltage() {
-  voltageValue = 0.0048875 * analogRead(batPin); 
+  voltageValue = 0.0048875 * analogRead(batPin);
+  notifications = notifications | B1; 
   if ( DEBUG ) { 
     printf("\nBattery Voltage is ");
     Serial.println(voltageValue);
@@ -203,6 +208,11 @@ float get_voltage() {
 }
 
 
+void check_board_voltage() {
+  if (Telemetry.voltage < voltage_low_threshold && Telemetry.voltage != 0) {
+    notifications = notifications | B10;
+  }
+}
 
 
 
@@ -218,11 +228,22 @@ void loop() {
   send_throttle();
   
   if (send_error_counter < 6) {
-    led_blink(ledPinGreen, 20, 1);
+    if (DEBUG) { 
+      led_blink(ledPinGreen, 20, 1);
+    } else {
+      delay(20);
+    }
   } else {
+    notifications = notifications | B1000;
     alert_on_error();
   }  
-  
+    
+  check_board_voltage();  
+    
+  if (notifications && millis() - last_notification > notification_period ) {
+    last_notification = millis();
+    display_mode = 3;
+  }
   main_lcd();
   
   check_switch_input();  
@@ -232,7 +253,7 @@ void loop() {
    
    delay(50);
    debug_time = millis(); 
-  };
+  }
   
 }
 

@@ -16,6 +16,7 @@ int menu_tree_len = 2;
 void check_switch_input() {
   if (digitalRead(switchPin) == HIGH) {
     if (DEBUG) { Serial.print(" Switch pressed ");  }
+    last_notification = millis(); // reset notification show timeout
     if (switch_pressed == false) {
       switch_pressed = true;
       start_press = millis();
