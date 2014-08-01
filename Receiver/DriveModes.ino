@@ -33,7 +33,7 @@ int directMode(int SpeedThrottleInput) {
 
 int easyMode(void) {
  
-  int max_speed = 120;
+  int max_speed = 130;
   
   SpeedCurrentOutput = normalMode();
   if (SpeedCurrentOutput > max_speed) { SpeedCurrentOutput = max_speed; };
