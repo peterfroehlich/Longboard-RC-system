@@ -28,7 +28,7 @@
 #define LCDD6 18 // Analog 4
 #define LCDD7 19 // Analog 5
 
-#define VERSION "Ver 0.2"
+#define VERSION "Ver 0.3"
 
 
 bool DEBUG = false;
@@ -72,6 +72,10 @@ int notification_period = 4000;
 long last_notification = millis();  
 unsigned int send_error_counter = 0;
 int voltage_low_threshold = 20000;
+float rc_voltage_low_threshold = 2.8;
+
+int voltage_low = 19500;
+int voltage_high = 25300;
 
 float voltageValue;
 
@@ -197,9 +201,11 @@ bool send_throttle() {
 
 
 
-float get_voltage() {
+float check_rc_voltage() {
   voltageValue = 0.0048875 * analogRead(batPin);
-  notifications = notifications | B1; 
+  if (voltageValue < rc_voltage_low_threshold) {
+    notifications = notifications | B1; 
+  }
   if ( DEBUG ) { 
     printf("\nBattery Voltage is ");
     Serial.println(voltageValue);
@@ -227,15 +233,16 @@ void loop() {
   
   send_throttle();
   
-  if (send_error_counter < 6) {
+  if (send_error_counter < 8) {
     if (DEBUG) { 
       led_blink(ledPinGreen, 20, 1);
     } else {
-      delay(20);
+      delay(25);
     }
   } else {
     notifications = notifications | B1000;
     alert_on_error();
+    delay(10);
   }  
     
   check_board_voltage();  
@@ -247,6 +254,8 @@ void loop() {
   main_lcd();
   
   check_switch_input();  
+  
+  check_rc_voltage();
   
   if (DEBUG) { 
    printf("Time: %d\r\n", millis() - debug_time);

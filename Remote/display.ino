@@ -73,8 +73,8 @@ void initialize_mode_0() {
   lcd.setCursor(0, 0); 
   lcd.print(modes[Packet.mode]);
   
-  // second line, first half: throttle
-  lcd.setCursor(4, 1);
+  // second line, first half: Battery
+  lcd.setCursor(0, 1);
   lcd.print("%"); 
   
   
@@ -82,26 +82,12 @@ void initialize_mode_0() {
 
 
 void display_mode_0() {
-  int throttle_pct = map(throttle_raw, throttle_min, throttle_max, -100, 100);
-  int offset = 0;
-  if (throttle_pct >= 0) {
-   offset += 1;
-  }
-  if (abs(throttle_pct) < 10) {
-   offset += 2;
-  } else if (abs(throttle_pct) < 100 ) {
-   offset += 1;
-  } 
 
-  lcd.setCursor(0, 1);
-  for (int x = offset; x > 0; x--) {
-    lcd.print(" ");
-  }
-  lcd.print(throttle_pct);
+  lcd.setCursor(1, 1);
   
-  // second line, second half: Board Voltage
-  lcd.setCursor(5, 1);
-  lcd.print(Telemetry.voltage);
+  // second line, Battery percent
+  lcd.print(map(Telemetry.voltage, voltage_low, voltage_high, 0, 100));
+
 }
 
 
@@ -133,21 +119,42 @@ void initialize_mode_2() {
   
   // first line: Raw throttle
   lcd.setCursor(0, 0); 
-  lcd.print("Raw:");
+  lcd.print("R");
   
-  // second line, first half: translated throttle
-  lcd.setCursor(0, 1);
-  lcd.print("ESC:");  
+  // first line, second half: translated throttle
+  lcd.setCursor(4, 0);
+  lcd.print("E"); 
+ 
+  // procent throttle
+  lcd.setCursor(4, 1);
+  lcd.print("%");  
 }
 
 void display_mode_2() {
-  lcd.setCursor(4, 0);
+  int throttle_pct = map(throttle_raw, throttle_min, throttle_max, -100, 100);
+  int offset = 0;
+  if (throttle_pct >= 0) {
+   offset += 1;
+  }
+  if (abs(throttle_pct) < 10) {
+   offset += 2;
+  } else if (abs(throttle_pct) < 100 ) {
+   offset += 1;
+  } 
+  
+  lcd.setCursor(1, 0);
   lcd.print(throttle_raw);
  
-  lcd.setCursor(6, 1);
+  lcd.setCursor(7, 0);
   lcd.print(" ");
-  lcd.setCursor(4, 1);
+  lcd.setCursor(5, 0);
   lcd.print(Packet.throttle); 
+  
+  lcd.setCursor(0, 1);
+  for (int x = offset; x > 0; x--) {
+    lcd.print(" ");
+  }
+  lcd.print(throttle_pct);
 }
 
 
@@ -190,7 +197,7 @@ void display_mode_3() {
 
   
 void show_battery_state_lcd() {
-  voltageValue = get_voltage();
+  voltageValue = check_rc_voltage();
   lcd.clear();
   lcd.setCursor(0, 0); 
   lcd.print("Battery:");

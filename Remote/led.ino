@@ -1,7 +1,7 @@
 
 
 void show_battery_state_led() {
-  voltageValue = get_voltage();
+  voltageValue = check_rc_voltage();
   
   if (voltageValue > 4.0) {
     led_blink(ledPinGreen, 400, 3);
