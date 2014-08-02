@@ -303,7 +303,7 @@ int filterInput(int input) {
   
   
 void low_voltage_protection() {
-  if (Telemetry.current < low_voltage_cutoff && not DEBUG) {
+  if (Telemetry.voltage < low_voltage_cutoff && not DEBUG) {
     
     int brake_delay = 5000;
     int now = millis();
