@@ -239,9 +239,10 @@ void loop() {
     } else {
       delay(25);
     }
+    digitalWrite(ledPinRed, HIGH);    // turn the red LED off
   } else {
     notifications = notifications | B1000;
-    alert_on_error();
+    digitalWrite(ledPinRed, LOW);   // turn the red LED on 
     delay(10);
   }  
     

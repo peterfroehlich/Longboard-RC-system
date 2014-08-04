@@ -77,15 +77,18 @@ void initialize_mode_0() {
   lcd.setCursor(0, 1);
   lcd.print("%"); 
   
-  
+  lcd.setCursor(5, 1);
+  lcd.print("Bat");
 }
 
 
 void display_mode_0() {
 
-  lcd.setCursor(1, 1);
-  
   // second line, Battery percent
+  lcd.setCursor(4, 1);
+  lcd.print(" ");  
+  
+  lcd.setCursor(1, 1);
   lcd.print(map(Telemetry.voltage, voltage_low, voltage_high, 0, 100));
 
 }

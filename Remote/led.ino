@@ -30,13 +30,3 @@ void led_blink(int color, int time, int repeats) {
   }
 } 
 
-
-void alert_on_error() {
-  if (send_error_counter > 6) {
-    digitalWrite(ledPinRed, LOW);   // turn the LED on 
-  } else {               
-    digitalWrite(ledPinRed, HIGH);    // turn the LED off 
-  }
-} 
-
-
