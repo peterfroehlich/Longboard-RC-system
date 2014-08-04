@@ -89,8 +89,11 @@ void display_mode_0() {
   lcd.print(" ");  
   
   lcd.setCursor(1, 1);
-  lcd.print(map(Telemetry.voltage, voltage_low, voltage_high, 0, 100));
-
+  if (Telemetry.voltage > 0) {
+    lcd.print(map(Telemetry.voltage, voltage_low, voltage_high, 0, 100));
+  } else {
+    lcd.print("0");
+  }
 }
 
 
