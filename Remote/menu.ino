@@ -8,6 +8,7 @@ long start_press = millis();
 char* menu_tree[]={
   "D. Mode",
   "Calib.RC",
+  "Easy Max",
   "-> exit"
 };
 int menu_tree_len = 2;
@@ -131,13 +132,30 @@ void select_menu(int menu_point) {
      switch_drive_mode();
      break;
     case 1:
-     lcd.setCursor(0, 1);
-     lcd.print("missing!");
-     delay(2000);
-     erase_line(1);
+     calibrate_rc();
+     break;
+    case 2:
+     set_max_speed_easymode();
      break;
   }
 }
+
+
+void calibrate_rc() {
+  not_implemented();
+}
+
+void set_max_speed_easymode() {
+  not_implemented();
+}
+
+void not_implemented() {
+  lcd.setCursor(0, 1);
+  lcd.print("missing!");
+  delay(2000);
+  erase_line(1); 
+}
+
 
 void switch_drive_mode() {
   int menu_point = Packet.mode;
