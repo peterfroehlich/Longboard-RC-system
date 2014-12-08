@@ -3,6 +3,17 @@ Longboard-RC-system
 
 A rc system for my electric longboard, based on two Arduinos talking over RF24
 
+Current state
+-------------
+
+Prototype 3 is currently in use. 
+
+The hand controller is still based on an trimmed down RC pistol-style controller (only original part is the poti in the trigger). With HD44780 Display to show drive mode, debug output, battery state and to access the menu. 
+It allows multiple drive modes with different acceleration algorithems and/or limitation of top speed. 
+
+The board controller can control the main power to the ESC over an BTS555 Mosfet, monitors energy consumption and battery voltage. It has a standby mode, emergency braking on link loss, undervoltage protection and of cause motor control. 
+
+
 Hardware
 --------
 
@@ -35,11 +46,11 @@ Roadmap
 
 ####v2:
 - Current and battery voltage get transmitted to Remote 
-- temperature monitoring
 - Voltage monitoring of Remote lipo
 - Display all these infos on Remote
 
 ####Later: 
+- temperature monitoring
 - Display speed as a function of voltage and Motor KV
 - Changeable maximum speed (to allow my niece to ride =) 
 - Change ESC settings via Board controller 
